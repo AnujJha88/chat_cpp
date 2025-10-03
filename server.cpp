@@ -34,3 +34,22 @@ ChatServer::ChatServer(int port){
     std::println("Server started on port{} ",port);
 
 }
+
+void ChatServer::handle_client(int client_socket){
+    char buffer[1024];// temp storage to hold incoming messages
+
+    std::string welcome_msg="Enter username:";
+
+    send(client_socket,welcome_msg.c_str(),welcome_msg.size(),0);//c_str gives you raw char pointer to its internal buffer , and so we send raw bytes instead of a string object. 0 means default behavior
+
+    int bytes_read=read(client_socket,buffer,sizeof(buffer)-1);//read data from client socket into buffer, -1 to leave space for null terminator.
+    //reads blocks until data is available
+
+    if(bytes_read<=0){
+        close(client_socket);
+        return;
+    }// hang up if no data read 
+
+    buffer[bytes_read]='\0';//null terminate the buffer to make it a valid C-string
+    
+}

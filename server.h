@@ -23,5 +23,7 @@ class ChatServer{
     
     public:
         ChatServer(int port=8888);
+        void handle_client(int client_socket);
+        
 
     };
