@@ -104,7 +104,18 @@ close(client_socket);
 }
 
 void ChatServer::broadcast_to_channel(const std::string& channel, const std::string &message, int exclude_socket){
+    //again we use the guard to lock the mutex
 
+    std::lock_guard<std::mutex> lock(client_mutex_);
+
+    auto channel_it=channels_.find(channel);
+    if(channel_it==channels_.end())return;
+
+    //now we send the message to all clients in the channel except the excluded one
+    for(int sock:channel_it->second){
+        if(sock!=exclude_socket){
+            send(sock,message.c_str(),message.size(),0);
+    }
 }
 
 void ChatServer::remove_client(int client_socket){
