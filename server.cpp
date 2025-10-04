@@ -52,4 +52,18 @@ void ChatServer::handle_client(int client_socket){
 
     buffer[bytes_read]='\0';//null terminate the buffer to make it a valid C-string
     
+
+    std::string username(buffer);
+    username.erase(username.find_last_not_of(" \n\r\t")+1);//trim whitespaces
+
+    {
+        std::lock_guard<std::mutex> lock(client_mutex_);
+        //this lock will be released when lock goes out of scope
+        clients_[client_socket]=username;//add client to the map
+        channels_["general"].insert(client_socket);//add client to general channel by default
+    }
+
+    //Now we welcome the user to the actual chat room
+    std::string joining_msg="Welcome "+username+"! You have joined the general channel.\n Type /help for commands\n";
+    
 }
