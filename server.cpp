@@ -117,6 +117,7 @@ void ChatServer::broadcast_to_channel(const std::string& channel, const std::str
             send(sock,message.c_str(),message.size(),0);
     }
 }
+}
 
 void ChatServer::remove_client(int client_socket){
     std::lock_guard<std::mutex> lock(client_mutex_);//always lock when doing this kind of thing to prevent random ass missing errors or some shi
