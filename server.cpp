@@ -43,7 +43,7 @@ void ChatServer::handle_client(int client_socket){
     send(client_socket,welcome_msg.c_str(),welcome_msg.size(),0);//c_str gives you raw char pointer to its internal buffer , and so we send raw bytes instead of a string object. 0 means default behavior
 
     int bytes_read=read(client_socket,buffer,sizeof(buffer)-1);//read data from client socket into buffer, -1 to leave space for null terminator.
-    //reads blocks until data is available
+    //blocks until data is available, or an error occurs
 
     if(bytes_read<=0){
         close(client_socket);
@@ -142,4 +142,28 @@ void ChatServer::remove_client(int client_socket){
     clients_.erase(client_socket);
      std::cout << "Client " << username << " completely removed." << std::endl;
 
+}
+
+void ChatServer::run(){
+    while(true){
+
+        sockaddr_in client_addr{};
+        socklen_t client_len=sizeof(client_addr);
+
+        int client_socket=accept(server_,(sockaddr*)&client_addr,&client_len);// blocks till a client connects
+
+        if(client_socket<0){
+            std::cerr<<"Failed to accept client connection\n";
+            continue;//try again
+        }
+
+        char client_ip[INET_ADDRSTRLEN];//human readable buffer for IP address, INET_ADDRSTRLEN is defined in <arpa/inet.h> and is 16 for IPv4
+        inet_ntop(AF_INET,&client_addr.sin_addr,client_ip,INET_ADDRSTRLEN);//does not write into memory so we pass in the buffer where we want it to write to.Again AF_INET tells us this is IPv4 and the second param s the byte format of the IP addres that we receive the other two are just the location and the size of the buffer
+        // also ntop is network to presentation
+
+        // log the new connection
+        std::println("New connection from {}",client_ip);
+
+       
+    }
 }
