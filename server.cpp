@@ -108,5 +108,26 @@ void ChatServer::broadcast_to_channel(const std::string& channel, const std::str
 }
 
 void ChatServer::remove_client(int client_socket){
+    std::lock_guard<std::mutex> lock(client_mutex_);//always lock when doing this kind of thing to prevent random ass missing errors or some shi
+
+    auto client_idx=clients_.find(client_socket);
     
+    if(client_idx==clients_.end())return;// doesnt exist 
+
+    std::string username=client_idx->second;
+    std::println("Removing client: {} \n",username);
+
+    //remove it from all channels
+    for(auto& channel_pair:channels_){
+        size_t removed_count = channel_pair.second.erase(client_socket);
+
+        if(removed_count>0){
+            std::string leave_msg=username+" left the channel. See ya!\n";
+            broadcast_to_channel(channel_pair.first,leave_msg,client_socket);
+        }
+    }
+
+    clients_.erase(client_socket);
+     std::cout << "Client " << username << " completely removed." << std::endl;
+
 }
