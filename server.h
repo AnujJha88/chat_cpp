@@ -24,6 +24,6 @@ class ChatServer{
     public:
         ChatServer(int port=8888);
         void handle_client(int client_socket);
-        
-
+        void broadcast_to_channel(const std::string& channel, const std::string &message,int exclude_socket=-1);
+        void remove_client(int client_socket);
     };

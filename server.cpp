@@ -65,5 +65,48 @@ void ChatServer::handle_client(int client_socket){
 
     //Now we welcome the user to the actual chat room
     std::string joining_msg="Welcome "+username+"! You have joined the general channel.\n Type /help for commands\n";
+
+    send(client_socket,joining_msg.c_str(),joining_msg.size(),0);//again we send it as raw bytes and stuff.
+
+    broadcast_to_channel("general",username+" has joined the channel.\n",client_socket);// basically like the joining notif you get on discord, and we exclude the client socket so they don't get notified of their own joining
+
+    while(true){
+
+        bytes_read=read(client_socket,buffer,sizeof(buffer)-1);
+        if(bytes_read<=0){
+            break;//client disconnected or error
+        }
+
+        buffer[bytes_read]='\0';
+        std::string message(buffer);
+        message.erase(message.find_last_not_of(" \n\r\t")+1);//trim whitespaces
+
+        if(message=="\quit"){
+            break;//client want to exit
+        }
+
+        //broadcast the message to all clients in the same channel
+        std::lock_guard<std::mutex> lock(client_mutex_);
+        std::string formatted_msg=username+": "+message+"\n";
+
+        for(int sock:channels_["general"]){//for now we just have one channel, general
+            if(sock!=client_socket){//exclude sender
+                send(sock,formatted_msg.c_str(),formatted_msg.size(),0);
+            }
+        }
+    }
+
+    remove_client(client_socket);
+close(client_socket);
+
+
+
+}
+
+void ChatServer::broadcast_to_channel(const std::string& channel, const std::string &message, int exclude_socket){
+
+}
+
+void ChatServer::remove_client(int client_socket){
     
 }
