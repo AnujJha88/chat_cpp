@@ -13,6 +13,10 @@ class ChatClient{
         bool running_;
     
     public:
+        ChatClient();
+        ~ChatClient();
+
+        bool connect_to_server(const std::string &host="127.0.0.1",int port=8888);
         
 
 };
