@@ -164,6 +164,8 @@ void ChatServer::run(){
         // log the new connection
         std::println("New connection from {}",client_ip);
 
+        std::thread client_thread(&ChatServer::handle_client,this,client_socket);//spawn a new thread to handle the client
+        client_thread.detach();//detach the thread to let it run independently
        
     }
 }
