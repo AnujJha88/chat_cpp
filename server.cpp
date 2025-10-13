@@ -169,3 +169,15 @@ void ChatServer::run(){
        
     }
 }
+
+int main(){
+    try{
+        ChatServer server(8888);
+        server.run();
+    }
+    catch(const std::exception &e){
+        std::cerr<<"Error: "<<e.what()<<"\n";
+        return 1;
+    }
+    return 0;
+    }

@@ -1,4 +1,4 @@
-#include "client .h"
+#include "client.h"
 
 ChatClient::ChatClient(){
     client_socket_=-1;
@@ -13,7 +13,7 @@ bool ChatClient::connect_to_server(const std::string &host, int port){
     client_socket_=socket(AF_INET,SOCK_STREAM,0); 
 
     if (client_socket_<0){
-        std:cerr<<"Socket creation failed\n";
+        std::cerr<<"Socket creation failed\n";
         return false;
     }
 
@@ -23,30 +23,30 @@ bool ChatClient::connect_to_server(const std::string &host, int port){
     server_addr.sin_port=htons(port);//port to byte network order
 
 
-    if(inet_pton(AF_INET, host.c_str(),&server.sin_addr)<0){
-        std:cerr<<"invalid server address"<<host<<endl;
+    if(inet_pton(AF_INET, host.c_str(),&server_addr.sin_addr)<0){
+        std::cerr<<"invalid server address"<<host<<std::endl;
         close(client_socket_);
-        client_socket_=-1
+        client_socket_=-1;
         return false;
     }
 
-    std::println("Connecting to server {}:{} \n",host,post);
+    std::println("Connecting to server {}:{} \n",host,port);
 
-    if(connect(client_socket, (sockaddr_in *)server_addr, sizeof(server_addr))<0){
+    if(connect(client_socket_, (sockaddr*)&server_addr, sizeof(server_addr))<0){
         std::cerr<<"Connection failed\n";
         close(client_socket_);
         client_socket_=-1;
         return false;
     }//this is executed only if the connect call fails, otherwise we have established the connection
 
-    std::println("Connected to server\n");
+    std::println("Connected to server");
     return true;
 }
 
 
 void ChatClient::receive_msg(){
     char buffer[1024];// this is the buffer to store incoming messages
-    std::println("Listening for messages...\n");
+    std::println("Listening for messages...");
     while(running_){
         int bytes_received=recv(client_socket_,buffer, sizeof(buffer)-1,0);//wait for data from server
         //where to receive from-> client_socket_
@@ -56,13 +56,13 @@ void ChatClient::receive_msg(){
 
 
         if(bytes_received<=0){
-            if(running_)std::println("Disconnected from server\n");
+            if(running_)std::println("Disconnected from server");
             running_=false;
             break;
         }
 
         buffer[bytes_received]='\0';//null terminate the buffer to make it a valid C-string
-        std::println(buffer);
+        std::println("{}",buffer);
         std::cout.flush();//force immediate display
         }
         std::cout<<"Stopped receiving messages \n";
@@ -95,8 +95,42 @@ void ChatClient::start_chat(){
         }
 
         if(!running_)break;
+        std::string message= input+"\n";
+        int bytes_sent=send(client_socket_,message.c_str(),message.length(),0);
 
-        
+        if(bytes_sent<0){
+            std::cerr<<"Failed to send message\n";
+            running_=false;
+            break;
+        }
+
     }
+
+      std::cout << "Cleaning up..." << std::endl;
+        
+        // Close the socket (this will make recv() return in the other thread)
+        if (client_socket_ != -1) {
+            close(client_socket_);
+            client_socket_ = -1;
+        }
+        
+        // Wait for receiver thread to finish
+        if (receiver_thread.joinable()) {
+            receiver_thread.join();
+            // join() waits for the thread to complete before continuing
+        }
+        
+        std::cout << "Client shutdown complete" << std::endl;
 }
 
+int main(){
+    std::cout << "Terminal Chat Client" << std::endl;
+    std::cout << "========================" << std::endl;
+    
+    // Create client instance and start chatting
+    ChatClient client;
+    client.start_chat();
+    
+    std::cout << "Goodbye!" << std::endl;
+    return 0;
+}
