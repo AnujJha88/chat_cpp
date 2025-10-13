@@ -34,6 +34,11 @@ ChatServer::ChatServer(int port){
     std::println("Server started on port{} ",port);
 
 }
+ChatServer::~ChatServer() {
+    if (server_ != -1) {
+        close(server_);
+    }
+}
 
 void ChatServer::handle_client(int client_socket){
     char buffer[1024];// temp storage to hold incoming messages
@@ -169,6 +174,54 @@ void ChatServer::run(){
        
     }
 }
+void ChatServer::send_help(int client_socket){
+    std::string help_msg=R"(
+═══════════════════════════════════════
+           CHAT COMMANDS
+═══════════════════════════════════════
+/help              - Show this help message
+/channels          - List all available channels
+/join <channel>    - Join a channel
+/create <channel>  - Create a new channel
+/users             - List users in current channel
+/quit              - Exit the chat
+═══════════════════════════════════════
+)";
+send(client_socket,help_msg.c_str(),help_msg.size(),0);
+}
+
+void ChatServer::list_channels(int client_socket){
+    std::lock_guard<std::mutex> lock(client_mutex_);
+
+    std::string msg = "\nAvailable Channels:\n";
+    msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
+    
+    for (const auto& [channel_name, members] : channels_) {
+        msg += "  • " + channel_name + " (" + std::to_string(members.size()) + " users)\n";
+    }
+    
+    msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
+    send(client_socket, msg.c_str(), msg.size(), 0);
+}
+
+void ChatServer::handle_command(int client_socket, const std::string &command){
+    if(message=="/help"){
+        send_help(client_socket);
+    }
+    else if(message=="/channels"){
+        list_channels(client_socket);
+    }
+    else if(message=="/create"){
+
+    }
+    else if(message=="/join"){
+
+    }
+    else{
+
+    }
+}
+
 
 int main(){
     try{
