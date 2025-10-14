@@ -209,13 +209,27 @@ void ChatServer::create_channel(int client_socket,const std::string &name){
     std::lock_guard<std::mutex> lock(client_mutex_);
 
     if(channels_.find(name)!=channels_.end()){
-        std::string msg = "❌ Channel '" + name + "' already exists.\n";
+        std::string msg = " Channel '" + name + "' already exists.\n";
         send(client_socket, msg.c_str(), msg.size(), 0);
         return;
     }
 
     std::string username=clients_[client_socket];
+    std::string current_channel=client_channels_[client_socket];
+    //make new entry in map
+    channels_[name]={};
+    // if others in the current channel send them message saying the user left this channel
 
+    if(!current_channel.empty()){
+            channels_[current_channel].erase(client_socket);
+            std::string goodbye_msg=username+"left the channel \n";
+
+            for(int sock: channels_[current_channel]){
+                send(sock, goodbye_msg.c_str(), goodbye_msg.size(), 0);
+            }
+    }
+
+    
 }
 
 void ChatServer::handle_command(int client_socket, const std::string &message){
