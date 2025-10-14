@@ -204,7 +204,21 @@ void ChatServer::list_channels(int client_socket){
     send(client_socket, msg.c_str(), msg.size(), 0);
 }
 
-void ChatServer::handle_command(int client_socket, const std::string &command){
+void ChatServer::create_channel(int client_socket,const std::string &name){
+    // ok so we lock first 
+    std::lock_guard<std::mutex> lock(client_mutex_);
+
+    if(channels_.find(name)!=channels_.end()){
+        std::string msg = "❌ Channel '" + name + "' already exists.\n";
+        send(client_socket, msg.c_str(), msg.size(), 0);
+        return;
+    }
+
+    std::string username=clients_[client_socket];
+
+}
+
+void ChatServer::handle_command(int client_socket, const std::string &message){
     if(message=="/help"){
         send_help(client_socket);
     }

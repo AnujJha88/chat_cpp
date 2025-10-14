@@ -26,8 +26,8 @@ class ChatServer{
         void broadcast_to_channel(const std::string& channel, const std::string &message,int exclude_socket=-1);
         void handle_command(int client_socket, const std::string &command);
         void send_help(int client_socket);
-        void list_chanels(int client_socket);
-    
+        void list_channels(int client_socket);
+        void create_channel(int client_socket,const std::string &name);
     public:
         ChatServer(int port=8888);
         ~ChatServer();
