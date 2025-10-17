@@ -22,3 +22,4 @@ some sort of TUI and more features i guess and channel creation to some users
 TOOD:
 - Handle /quit much more gracefully and actually exit from the app.
 - check channel creation logic and join logic
+- ideally when we do create or join we want the name of the channel right after we write the command but currently we take a new input so fix that
