@@ -28,6 +28,8 @@ class ChatServer{
         void send_help(int client_socket);
         void list_channels(int client_socket);
         void create_channel(int client_socket,const std::string &name);
+                void join_channel(int client_socket,const std::string &name);
+
     public:
         ChatServer(int port=8888);
         ~ChatServer();

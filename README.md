@@ -17,3 +17,8 @@ make #compiles the binaries for server and client
 Future plans:
 
 some sort of TUI and more features i guess and channel creation to some users
+
+
+TOOD:
+- Handle /quit much more gracefully and actually exit from the app.
+- check channel creation logic and join logic

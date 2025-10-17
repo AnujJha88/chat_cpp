@@ -86,9 +86,11 @@ void ChatServer::handle_client(int client_socket){
         std::string message(buffer);
         message.erase(message.find_last_not_of(" \n\r\t")+1);//trim whitespaces
 
-        if(message=="\quit"){
+        if(message=="/quit"){
             break;//client want to exit
         }
+
+        handle_command(client_socket,message);
 
         //broadcast the message to all clients in the same channel
         std::lock_guard<std::mutex> lock(client_mutex_);
@@ -229,7 +231,30 @@ void ChatServer::create_channel(int client_socket,const std::string &name){
             }
     }
 
+    // we want to update the mappings handling the user to channel stuff now ig
+
+    client_channels_[client_socket]=name;
+    // so that is taken care of so we now joined the channel when we are the one creating it.
+
+
     
+}
+
+void ChatServer::join_channel(int client_socket, const std::string &name){
+    // here what we want to do is 
+        client_channels_[client_socket]=name;
+// and now maybe we send a message to all other members in the same channel that so and so user has joined
+
+std::string username=clients_[client_socket];
+std::string intro_message= username+"has joined the channel";
+
+for(auto sock: channels_[name]){
+    send(sock,intro_message.c_str(),intro_message.size(),0);
+}
+
+// do we need to do any more stuff?
+
+// i guess handling the actual switching of places where the messages appear is left.
 }
 
 void ChatServer::handle_command(int client_socket, const std::string &message){
@@ -240,7 +265,10 @@ void ChatServer::handle_command(int client_socket, const std::string &message){
         list_channels(client_socket);
     }
     else if(message=="/create"){
+        std::string channel_name;
+            std::getline(std::cin,channel_name);
 
+            create_channel(client_socket,channel_name);
     }
     else if(message=="/join"){
 
