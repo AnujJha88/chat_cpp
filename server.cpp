@@ -233,11 +233,11 @@ void ChatServer::create_channel(int client_socket,const std::string &name){
 
     // we want to update the mappings handling the user to channel stuff now ig
 
-    client_channels_[client_socket]=name;
+    // client_channels_[client_socket]=name;
     // so that is taken care of so we now joined the channel when we are the one creating it.
+    //maybe it will be better to call the join function after we update the mappings and stuff
 
-
-    
+    join_channel(client_socket,name);
 }
 
 void ChatServer::join_channel(int client_socket, const std::string &name){
@@ -271,7 +271,10 @@ void ChatServer::handle_command(int client_socket, const std::string &message){
             create_channel(client_socket,channel_name);
     }
     else if(message=="/join"){
+        std::string channel_name;
+ std::getline(std::cin,channel_name);
 
+            join_channel(client_socket,channel_name);
     }
     else{
 
