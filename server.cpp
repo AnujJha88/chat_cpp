@@ -2,13 +2,13 @@
 
 ChatServer::ChatServer(int port){
     //first we want to create the socket
-    server_=socket(AF_INET,SOCK_STREAM,0);//protocol 0 means automatically chosen.AF_INET means we use IPv4 and SOCK_STREAM is TCP 
+    server_=socket(AF_INET,SOCK_STREAM,0);//protocol 0 means automatically chosen.AF_INET means we use IPv4 and SOCK_STREAM is TCP
 
     if(server_<0){
         throw std::runtime_error("Socket creation failed");
     }
     int option=1;
-    setsockopt(server_,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));//set socket option to reuse address 
+    setsockopt(server_,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));//set socket option to reuse address
     //restart server quickly after crash
 
     sockaddr_in server_addr{};// this is a struct containing the address family, port number and IP address
@@ -18,7 +18,7 @@ ChatServer::ChatServer(int port){
     server_addr.sin_addr.s_addr=INADDR_ANY;//listen to all interfaces,makes it 0.0.0.0 as cherno pointed out
     //might see if there's any improvements we can do here later
 
-    server_addr.sin_port=htons(port);//htons is host to network short and converts port number to network byte order 
+    server_addr.sin_port=htons(port);//htons is host to network short and converts port number to network byte order
 
     if(bind(server_,(sockaddr*)&server_addr,sizeof(server_addr))<0){
         throw std::runtime_error("Binding failed");//fail means the port is already in use elsewhere
@@ -53,10 +53,10 @@ void ChatServer::handle_client(int client_socket){
     if(bytes_read<=0){
         close(client_socket);
         return;
-    }// hang up if no data read 
+    }// hang up if no data read
 
     buffer[bytes_read]='\0';//null terminate the buffer to make it a valid C-string
-    
+
 
     std::string username(buffer);
     username.erase(username.find_last_not_of(" \n\r\t")+1);//trim whitespaces
@@ -130,8 +130,8 @@ void ChatServer::remove_client(int client_socket){
     std::lock_guard<std::mutex> lock(client_mutex_);//always lock when doing this kind of thing to prevent random ass missing errors or some shi
 
     auto client_idx=clients_.find(client_socket);
-    
-    if(client_idx==clients_.end())return;// doesnt exist 
+
+    if(client_idx==clients_.end())return;// doesnt exist
 
     std::string username=client_idx->second;
     std::println("Removing client: {} \n",username);
@@ -151,31 +151,7 @@ void ChatServer::remove_client(int client_socket){
 
 }
 
-void ChatServer::run(){
-    while(true){
 
-        sockaddr_in client_addr{};
-        socklen_t client_len=sizeof(client_addr);
-
-        int client_socket=accept(server_,(sockaddr*)&client_addr,&client_len);// blocks till a client connects
-
-        if(client_socket<0){
-            std::cerr<<"Failed to accept client connection\n";
-            continue;//try again
-        }
-
-        char client_ip[INET_ADDRSTRLEN];//human readable buffer for IP address, INET_ADDRSTRLEN is defined in <arpa/inet.h> and is 16 for IPv4
-        inet_ntop(AF_INET,&client_addr.sin_addr,client_ip,INET_ADDRSTRLEN);//does not write into memory so we pass in the buffer where we want it to write to.Again AF_INET tells us this is IPv4 and the second param s the byte format of the IP addres that we receive the other two are just the location and the size of the buffer
-        // also ntop is network to presentation
-
-        // log the new connection
-        std::println("New connection from {}",client_ip);
-
-        std::thread client_thread(&ChatServer::handle_client,this,client_socket);//spawn a new thread to handle the client
-        client_thread.detach();//detach the thread to let it run independently
-       
-    }
-}
 void ChatServer::send_help(int client_socket){
     std::string help_msg=R"(
 ═══════════════════════════════════════
@@ -197,17 +173,17 @@ void ChatServer::list_channels(int client_socket){
 
     std::string msg = "\nAvailable Channels:\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
-    
+
     for (const auto& [channel_name, members] : channels_) {
         msg += "  • " + channel_name + " (" + std::to_string(members.size()) + " users)\n";
     }
-    
+
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
     send(client_socket, msg.c_str(), msg.size(), 0);
 }
 
 void ChatServer::create_channel(int client_socket,const std::string &name){
-    // ok so we lock first 
+    // ok so we lock first
     std::lock_guard<std::mutex> lock(client_mutex_);
 
     if(channels_.find(name)!=channels_.end()){
@@ -237,24 +213,84 @@ void ChatServer::create_channel(int client_socket,const std::string &name){
     // so that is taken care of so we now joined the channel when we are the one creating it.
     //maybe it will be better to call the join function after we update the mappings and stuff
 
-    join_channel(client_socket,name);
+    //join_channel(client_socket,name);
+    //lets try to do it out fully first cuz i think my join function is not
+    //correct
+
+    channels_[name].insert(client_socket);
+    client_channels_[client_socket]=name;
+    std::string msg="Channel"+name+"created and joined successfully\n";
+    send(client_socket,msg.c_str(),msg.size(),0);
+    std::println("Channel '{}' created by {} (auto-joined)", name, username);
+
 }
 
 void ChatServer::join_channel(int client_socket, const std::string &name){
-    // here what we want to do is 
-        client_channels_[client_socket]=name;
+    //lock first
+    std::lock_guard<std::mutex> lock(client_mutex_);
+
+    //check for if it already exists
+
+    if(channels_.find(name)==channels_.end()){
+        std::string msg = " Channel '" + name + "' does not exist. Use /create to create it.\n";
+        send(client_socket, msg.c_str(), msg.size(), 0);
+        return;
+    }
+
+    
 // and now maybe we send a message to all other members in the same channel that so and so user has joined
 
-std::string username=clients_[client_socket];
-std::string intro_message= username+"has joined the channel";
+    std::string username=clients_[client_socket];
+    std::string(current_channel)=client_channels_[client_socket];
+    if(current_channel==name){
+            std::string msg = "You are already in #" + name + "\n";
+            send(client_socket, msg.c_str(), msg.size(), 0);
+            return;
+    }
 
-for(auto sock: channels_[name]){
-    send(sock,intro_message.c_str(),intro_message.size(),0);
+    if(!current_channel.empty()){
+            channels_[current_channel].erase(client_socket);
+            std::string goodbye_msg=username+"left the channel \n";
+
+            for(int sock: channels_[current_channel]){
+                send(sock, goodbye_msg.c_str(), goodbye_msg.size(), 0);
+            }
+    }
+
+    //add to new channel
+    channels_[name].insert(client_socket);
+    client_channels_[client_socket] = name;
+    
+    
+    std::string intro_message= username+"has joined the channel";
+
+    for(auto sock: channels_[name]){
+        send(sock,intro_message.c_str(),intro_message.size(),0);
+    }
+
+
 }
-
-// do we need to do any more stuff?
-
-// i guess handling the actual switching of places where the messages appear is left.
+void ChatServer::list_users(int client_socket){
+    std::string current_channel=client_channels_[client_socket];
+    if(current_channel.empty()){
+        std::string msg="You are not in any channels\n";
+        send(client_socket,msg.c_str(),msg.size(),0);
+        return;
+    }
+       std::string msg = "\n Users in #" + current_channel + ":\n";
+    msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
+    
+    for (int sock : channels_[current_channel]) {
+        std::string username = clients_[sock];
+        if (sock == client_socket) {
+            msg += "  • " + username + " (you)\n";
+        } else {
+            msg += "  • " + username + "\n";
+        }
+    }
+    
+    msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
+    send(client_socket, msg.c_str(), msg.size(), 0);
 }
 
 void ChatServer::handle_command(int client_socket, const std::string &message){
@@ -280,7 +316,31 @@ void ChatServer::handle_command(int client_socket, const std::string &message){
 
     }
 }
+void ChatServer::run(){
+    while(true){
 
+        sockaddr_in client_addr{};
+        socklen_t client_len=sizeof(client_addr);
+
+        int client_socket=accept(server_,(sockaddr*)&client_addr,&client_len);// blocks till a client connects
+
+        if(client_socket<0){
+            std::cerr<<"Failed to accept client connection\n";
+            continue;//try again
+        }
+
+        char client_ip[INET_ADDRSTRLEN];//human readable buffer for IP address, INET_ADDRSTRLEN is defined in <arpa/inet.h> and is 16 for IPv4
+        inet_ntop(AF_INET,&client_addr.sin_addr,client_ip,INET_ADDRSTRLEN);//does not write into memory so we pass in the buffer where we want it to write to.Again AF_INET tells us this is IPv4 and the second param s the byte format of the IP addres that we receive the other two are just the location and the size of the buffer
+        // also ntop is network to presentation
+
+        // log the new connection
+        std::println("New connection from {}",client_ip);
+
+        std::thread client_thread(&ChatServer::handle_client,this,client_socket);//spawn a new thread to handle the client
+        client_thread.detach();//detach the thread to let it run independently
+
+    }
+}
 
 int main(){
     try{

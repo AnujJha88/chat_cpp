@@ -29,6 +29,8 @@ class ChatServer{
         void list_channels(int client_socket);
         void create_channel(int client_socket,const std::string &name);
         void join_channel(int client_socket,const std::string &name);
+        void list_users(int client_socket);
+        
 
     public:
         ChatServer(int port=8888);
