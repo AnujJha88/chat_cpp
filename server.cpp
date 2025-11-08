@@ -90,8 +90,18 @@ void ChatServer::handle_client(int client_socket){
             break;//client want to exit
         }
 
-        handle_command(client_socket,message);
+        if(message[0] == '/'){
+        handle_command(client_socket, message);
+        } else {
+        // Only broadcast regular messages to the user's actual channel
+        std::lock_guard<std::mutex> lock(client_mutex_);
+        std::string current_channel = client_channels_[client_socket];
+        if(current_channel.empty()) current_channel = "general";
 
+        std::string username = clients_[client_socket];
+        std::string formatted_msg = username + ": " + message + "\n";
+        broadcast_to_channel(current_channel, formatted_msg, client_socket);
+        }
         //broadcast the message to all clients in the same channel
         std::lock_guard<std::mutex> lock(client_mutex_);
         std::string formatted_msg=username+": "+message+"\n";
@@ -237,7 +247,7 @@ void ChatServer::join_channel(int client_socket, const std::string &name){
         return;
     }
 
-    
+
 // and now maybe we send a message to all other members in the same channel that so and so user has joined
 
     std::string username=clients_[client_socket];
@@ -260,8 +270,8 @@ void ChatServer::join_channel(int client_socket, const std::string &name){
     //add to new channel
     channels_[name].insert(client_socket);
     client_channels_[client_socket] = name;
-    
-    
+
+
     std::string intro_message= username+"has joined the channel";
 
     for(auto sock: channels_[name]){
@@ -279,7 +289,7 @@ void ChatServer::list_users(int client_socket){
     }
        std::string msg = "\n Users in #" + current_channel + ":\n";
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
-    
+
     for (int sock : channels_[current_channel]) {
         std::string username = clients_[sock];
         if (sock == client_socket) {
@@ -288,7 +298,7 @@ void ChatServer::list_users(int client_socket){
             msg += "  • " + username + "\n";
         }
     }
-    
+
     msg += "━━━━━━━━━━━━━━━━━━━━━━\n";
     send(client_socket, msg.c_str(), msg.size(), 0);
 }

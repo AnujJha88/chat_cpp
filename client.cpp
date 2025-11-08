@@ -1,4 +1,5 @@
 #include "client.h"
+#include <sys/socket.h>
 
 ChatClient::ChatClient(){
     client_socket_=-1;
@@ -10,7 +11,7 @@ ChatClient::~ChatClient(){
 }
 
 bool ChatClient::connect_to_server(const std::string &host, int port){
-    client_socket_=socket(AF_INET,SOCK_STREAM,0); 
+    client_socket_=socket(AF_INET,SOCK_STREAM,0);
 
     if (client_socket_<0){
         std::cerr<<"Socket creation failed\n";
@@ -81,7 +82,7 @@ void ChatClient::start_chat(){
     std::cout << "Type your messages and press Enter to send." << std::endl;
     std::cout << "Type '/quit' to exit." << std::endl;
     std::cout << "──────────────────────────────" << std::endl;
-    
+
 
     std::string input;
 
@@ -90,6 +91,8 @@ void ChatClient::start_chat(){
 
         if(input=="/quit"){
             std::println("Exiting...");
+            std::string quit_msg=input+"\n";
+            send(client_socket_,quit_msg.c_str(),quit_msg.length(),0);
             running_=false;
             break;
         }
@@ -107,30 +110,31 @@ void ChatClient::start_chat(){
     }
 
       std::cout << "Cleaning up..." << std::endl;
-        
+
         // Close the socket (this will make recv() return in the other thread)
         if (client_socket_ != -1) {
+            shutdown(client_socket_,SHUT_RDWR);// close both sides
             close(client_socket_);
             client_socket_ = -1;
         }
-        
+
         // Wait for receiver thread to finish
         if (receiver_thread.joinable()) {
             receiver_thread.join();
             // join() waits for the thread to complete before continuing
         }
-        
+
         std::cout << "Client shutdown complete" << std::endl;
 }
 
 int main(){
     std::cout << "Terminal Chat Client" << std::endl;
     std::cout << "========================" << std::endl;
-    
+
     // Create client instance and start chatting
     ChatClient client;
     client.start_chat();
-    
+
     std::cout << "Goodbye!" << std::endl;
     return 0;
 }
