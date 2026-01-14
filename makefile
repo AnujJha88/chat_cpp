@@ -1,30 +1,39 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++23 -pthread -Wall -Wextra
-# -Wall: Enable all warnings
-# -Wextra: Enable extra warnings
-# -pthread: Link pthread library for threads
+# Added -Iinclude to tell the compiler where to find .h files
+CXXFLAGS = -std=c++23 -pthread -Wall -Wextra -Iinclude
 
-# Targets
-TARGETS = server client
+# Directories
+SRC_DIR = src
+EXE_DIR = exe
 
-# Default target (when you just run 'make')
-all: $(TARGETS)
+# Targets - Binaries will now be placed in the exe/ folder
+TARGETS = $(EXE_DIR)/server $(EXE_DIR)/client
+
+# Default target
+all: $(EXE_DIR) $(TARGETS)
+
+# Ensure the exe directory exists
+$(EXE_DIR):
+	mkdir -p $(EXE_DIR)
 
 # Server compilation
-server: server.cpp
-	$(CXX) $(CXXFLAGS) -o server server.cpp
+# Uses src/server.cpp and outputs to exe/server
+$(EXE_DIR)/server: $(SRC_DIR)/server.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Client compilation  
-client: client.cpp
-	$(CXX) $(CXXFLAGS) -o client client.cpp
+# Client compilation
+# Uses src/client.cpp and outputs to exe/client
+$(EXE_DIR)/client: $(SRC_DIR)/client.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Clean up compiled files
+# Clean up compiled files in the exe directory
 clean:
 	rm -f $(TARGETS)
+	rm -rf $(EXE_DIR)
 
 # Install (just creates the binaries)
 install: all
 
-# Phony targets (not actual files)
+# Phony targets
 .PHONY: all clean install

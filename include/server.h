@@ -1,3 +1,5 @@
+#ifndef SERVER_H
+#define SERVER_H
 #include<iostream>
 #include<thread>
 #include<map>
@@ -30,7 +32,7 @@ class ChatServer{
         void create_channel(int client_socket,const std::string &name);
         void join_channel(int client_socket,const std::string &name);
         void list_users(int client_socket);
-        
+
 
     public:
         ChatServer(int port=8888);
@@ -38,3 +40,6 @@ class ChatServer{
         void handle_client(int client_socket);
         void run();
     };
+
+
+#endif

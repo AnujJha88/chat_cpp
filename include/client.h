@@ -1,3 +1,6 @@
+#ifndef CLIENT_H
+#define CLIENT_H
+
 #include<iostream>
 #include<thread>
 #include<string>
@@ -11,7 +14,7 @@ class ChatClient{
     private:
         int client_socket_;
         bool running_;
-    
+
     public:
         ChatClient();
         ~ChatClient();
@@ -21,3 +24,5 @@ class ChatClient{
         void start_chat();
 
 };
+
+#endif
