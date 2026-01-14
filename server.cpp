@@ -66,6 +66,7 @@ void ChatServer::handle_client(int client_socket){
         //this lock will be released when lock goes out of scope
         clients_[client_socket]=username;//add client to the map
         channels_["general"].insert(client_socket);//add client to general channel by default
+        client_channels_[client_socket]="general";//add client to general channel by default
     }
 
     //Now we welcome the user to the actual chat room
@@ -103,14 +104,6 @@ void ChatServer::handle_client(int client_socket){
         broadcast_to_channel(current_channel, formatted_msg, client_socket);
         }
         //broadcast the message to all clients in the same channel
-        std::lock_guard<std::mutex> lock(client_mutex_);
-        std::string formatted_msg=username+": "+message+"\n";
-
-        for(int sock:channels_["general"]){//for now we just have one channel, general
-            if(sock!=client_socket){//exclude sender
-                send(sock,formatted_msg.c_str(),formatted_msg.size(),0);
-            }
-        }
     }
 
     remove_client(client_socket);
@@ -144,6 +137,7 @@ void ChatServer::remove_client(int client_socket){
     if(client_idx==clients_.end())return;// doesnt exist
 
     std::string username=client_idx->second;
+    std::string current_channel=client_channels_[client_socket];
     std::println("Removing client: {} \n",username);
 
     //remove it from all channels
@@ -155,28 +149,36 @@ void ChatServer::remove_client(int client_socket){
             broadcast_to_channel(channel_pair.first,leave_msg,client_socket);
         }
     }
+    if (!current_channel.empty() && channels_.count(current_channel)) {
+        channels_[current_channel].erase(client_socket);
+        std::string leave_msg = username + " has left the chat. See ya!\n";
+
+        for(int sock : channels_[current_channel]) {
+            send(sock, leave_msg.c_str(), leave_msg.size(), 0);
+        }
+    }
 
     clients_.erase(client_socket);
-     std::cout << "Client " << username << " completely removed." << std::endl;
-
+    client_channels_.erase(client_socket);
+    std::println("Client {} (Socket {}) completely removed.", username, client_socket);
 }
 
 
 void ChatServer::send_help(int client_socket){
-    std::string help_msg=R"(
-═══════════════════════════════════════
-           CHAT COMMANDS
-═══════════════════════════════════════
-/help              - Show this help message
-/channels          - List all available channels
-/join <channel>    - Join a channel
-/create <channel>  - Create a new channel
-/users             - List users in current channel
-/quit              - Exit the chat
-═══════════════════════════════════════
-)";
-send(client_socket,help_msg.c_str(),help_msg.size(),0);
-}
+        std::string help_msg=R"(
+    ═══════════════════════════════════════
+               CHAT COMMANDS
+    ═══════════════════════════════════════
+    /help              - Show this help message
+    /channels          - List all available channels
+    /join <channel>    - Join a channel
+    /create <channel>  - Create a new channel
+    /users             - List users in current channel
+    /quit              - Exit the chat
+    ═══════════════════════════════════════
+    )";
+    send(client_socket,help_msg.c_str(),help_msg.size(),0);
+    }
 
 void ChatServer::list_channels(int client_socket){
     std::lock_guard<std::mutex> lock(client_mutex_);
@@ -304,26 +306,35 @@ void ChatServer::list_users(int client_socket){
 }
 
 void ChatServer::handle_command(int client_socket, const std::string &message){
-    if(message=="/help"){
+    size_t space_pos =message.find(" ");
+
+    std::string command=message.substr(0,space_pos);
+    std::string argument=space_pos!=std::string::npos?message.substr(space_pos+1):"";
+    if(command=="/help"){
         send_help(client_socket);
     }
-    else if(message=="/channels"){
+    else if(command=="/channels"){
         list_channels(client_socket);
     }
     else if(message=="/create"){
-        std::string channel_name;
-            std::getline(std::cin,channel_name);
-
-            create_channel(client_socket,channel_name);
+       if (argument.empty()) {
+            std::string msg = "Usage: /create <channel_name>\n";
+            send(client_socket, msg.c_str(), msg.size(), 0);
+        } else {
+            create_channel(client_socket, argument);
+        }
     }
     else if(message=="/join"){
-        std::string channel_name;
- std::getline(std::cin,channel_name);
 
-            join_channel(client_socket,channel_name);
+            if (argument.empty()) {
+            std::string msg = "Usage: /join <channel_name>\n";
+            send(client_socket, msg.c_str(), msg.size(), 0);
+        } else {
+            join_channel(client_socket, argument);
+        }
     }
-    else{
-
+    else if(command=="/users"){
+        list_users(client_socket);
     }
 }
 void ChatServer::run(){
